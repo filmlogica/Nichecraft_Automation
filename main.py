@@ -1,45 +1,76 @@
-from flask import Flask
 from apis.rapidapi_textgen import generate_product_text
 from apis.rapidapi_imagegen import generate_image
 from utils.zip_builder import build_zip
 from utils.trend_fetcher import get_trending_keywords
-from utils.shopify_uploader import create_product
+from utils.shopify_uploader import create_product, push_zip_to_github
 import random
+import os
+import shutil
+from pathlib import Path
+import subprocess
 
-app = Flask(__name__)
+# GitHub public raw URL setup
+GITHUB_USER = "yourusername"  # <-- CHANGE THIS
+GITHUB_REPO = "your-repo-name"  # <-- CHANGE THIS
 
-@app.route('/')
-def home():
-    return "🧞 Nichecraft_Automation is alive! Visit /generate-product to create and upload."
+# Size limits
+MAX_REPO_MB = 950  # Leave headroom under GitHub's 1GB limit
 
-@app.route('/generate-product')
-def generate_product():
-    # 1. Get a trending topic
+def get_repo_size_mb():
+    try:
+        result = subprocess.check_output(["du", "-sm", "."])
+        size_mb = int(result.decode().split()[0])
+        return size_mb
+    except Exception as e:
+        print(f"⚠️ Could not calculate repo size: {e}")
+        return 0
+
+def cleanup_oldest_zips(folder="downloads", keep=10):
+    zips = sorted(Path(folder).glob("*.zip"), key=os.path.getmtime)
+    while get_repo_size_mb() > MAX_REPO_MB and len(zips) > keep:
+        oldest = zips.pop(0)
+        print(f"🗑️ Removing {oldest.name} to save space...")
+        os.remove(oldest)
+
+def get_github_download_url(zip_name):
+    return f"https://{GITHUB_USER}.github.io/{GITHUB_REPO}/downloads/{zip_name}"
+
+def run_product_generation():
     trend = random.choice(get_trending_keywords())
     title = f"{trend.title()} Digital Product"
     
-    # 2. Generate product description
-    description = generate_product_text(f"Write a persuasive Shopify description for a product titled '{title}'.")
+    print(f"\n🚀 Creating product: {title}")
 
-    # 3. Generate product image
-    generate_image(f"{trend} cover design for a digital product")
+    # Generate content
+    description = generate_product_text(f"Write a Shopify product description for '{title}'.")
+    generate_image(f"{trend} product mockup")
 
-    # 4. Write readme and license
+    # Save base files
     with open("README.txt", "w") as f:
         f.write(description or "Thank you for your purchase!")
 
     with open("LICENSE.txt", "w") as f:
-        f.write("For personal use only. No redistribution or resale allowed.")
+        f.write("For personal use only. No resale allowed.")
 
-    # 5. Package into a ZIP
+    # Build ZIP
     zip_path = build_zip(title)
+    zip_name = Path(zip_path).name
 
-    # 6. Upload to Shopify
+    # Cleanup if needed
+    cleanup_oldest_zips()
+
+    # Push ZIP to GitHub and get download link
+    push_zip_to_github(zip_path)
+    zip_url = get_github_download_url(zip_name)
+
+    # Add download link to description
+    description += f"\n\n📥 [Click here to download your product]({zip_url})"
+
+    # Upload to Shopify
     price = round(random.uniform(5.99, 49.99), 2)
-    image_url = None  # Shopify accepts image URLs or uploads via a separate API (can be added later)
-    create_product(title, description, price, image_url)
+    create_product(title, description, price)
 
-    return f"✅ Product '{title}' created and uploaded with price ${price}!"
+    print(f"✅ Product '{title}' created at ${price} with download link:\n{zip_url}")
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    run_product_generation()
