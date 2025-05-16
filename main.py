@@ -10,8 +10,8 @@ from pathlib import Path
 import subprocess
 
 # GitHub public raw URL setup
-GITHUB_USER = "yourusername"  # <-- CHANGE THIS
-GITHUB_REPO = "your-repo-name"  # <-- CHANGE THIS
+GITHUB_USER = "filmlogica"  # <-- CHANGE THIS
+GITHUB_REPO = "Nichecraft_Automation"  # <-- CHANGE THIS
 
 # Size limits
 MAX_REPO_MB = 950  # Leave headroom under GitHub's 1GB limit
