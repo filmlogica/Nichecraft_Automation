@@ -13,8 +13,8 @@ SHOPIFY_STORE_URL = os.getenv("SHOPIFY_STORE_URL")
 SHOPIFY_API_VERSION = os.getenv("SHOPIFY_API_VERSION", "2023-04")
 
 # Update these with your actual GitHub details
-GITHUB_USERNAME = "yourusername"
-GITHUB_REPO = "your-repo-name"
+GITHUB_USERNAME = "filmlogica"
+GITHUB_REPO = "Nichecraft_Automation"
 
 def create_product(title, body_html, price, image_url=None):
     url = f"https://{SHOPIFY_STORE_URL}/admin/api/{SHOPIFY_API_VERSION}/products.json"
